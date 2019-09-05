@@ -1,0 +1,13 @@
+diff -Naur msys64/etc/pacman.d/mirrorlist.mingw64 msys64B/etc/pacman.d/mirrorlist.mingw64
+--- msys64/etc/pacman.d/mirrorlist.mingw64	2018-06-07 10:26:58.000000000 +0200
++++ msys64B/etc/pacman.d/mirrorlist.mingw64	2019-09-04 20:51:47.650081700 +0200
+@@ -4,7 +4,7 @@
+ 
+ ## Primary
+ ## msys2.org
+-Server = http://repo.msys2.org/mingw/x86_64/
+-Server = https://sourceforge.net/projects/msys2/files/REPOS/MINGW/x86_64/
+ Server = http://www2.futureware.at/~nickoe/msys2-mirror/mingw/x86_64/
+ Server = https://mirror.yandex.ru/mirrors/msys2/mingw/x86_64/
++Server = http://repo.msys2.org/mingw/x86_64/
++Server = https://sourceforge.net/projects/msys2/files/REPOS/MINGW/x86_64/

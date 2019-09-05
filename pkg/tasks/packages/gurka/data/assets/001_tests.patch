@@ -1,0 +1,18 @@
+diff -Naur src/Mera/TextAsdas.txt srcA/Mera/TextAsdas.txt
+--- src/Mera/TextAsdas.txt	1970-01-01 01:00:00.000000000 +0100
++++ srcA/Mera/TextAsdas.txt	2019-09-04 20:18:59.202721800 +0200
+@@ -0,0 +1 @@
++Allt fï¿½r densa stjï¿½nran
+\ No newline at end of file
+diff -Naur src/Mera/TextDocF.txt srcA/Mera/TextDocF.txt
+--- src/Mera/TextDocF.txt	2019-09-04 16:46:37.721339000 +0200
++++ srcA/Mera/TextDocF.txt	1970-01-01 01:00:00.000000000 +0100
+@@ -1 +0,0 @@
+-Allt för den ljusa stjänran
+\ No newline at end of file
+diff -Naur src/TextDocB.txt srcA/TextDocB.txt
+--- src/TextDocB.txt	2019-09-04 16:16:13.110203600 +0200
++++ srcA/TextDocB.txt	1970-01-01 01:00:00.000000000 +0100
+@@ -1 +0,0 @@
+-Vi tackom nu så gärna
+\ No newline at end of file
