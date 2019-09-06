@@ -2,6 +2,7 @@ package protobuf
 
 import (
 	"fmt"
+	"os"
 	"path"
 
 	"github.com/staffano/sonbyg/pkg/builder"
@@ -52,10 +53,73 @@ func InstallProtocGenGo(b *builder.Builder, vars *utils.Variables) *builder.Task
 	return b.Add(t, builder.Message(t.Variables, fmt.Sprintf("protoc-gen-go installed to %v", v["GOBIN"])))
 }
 
-// Protoc runs the protoc compiler on a source
-func Protoc(b *builder.Builder, vars *utils.Variables) *builder.Task {
-	t := builder.NewTask(b, "Protoc")
+func doProtoc(v utils.Variables) *builder.Artifact {
+	v.Printf("Start doProtoc")
+	args := v["ARGS"].([]string)
+	includes := v["PROTOC_OPTS"].([]string)
+	prefixBin := path.Join(v["PREFIX"].(string), "bin")
+	protocExe := path.Join(prefixBin, "protoc.exe")
+	tmpdir := os.TempDir()
+
+	// Build option list to protoc
+	opts := []string{}
+	for _, i := range includes {
+		opts = append(opts, "-I"+i)
+	}
+	opts = append(opts, args...)
+	v.PrependEnv("PATH", prefixBin)
+	utils.Exec("protoc", tmpdir, v, protocExe, opts...)
+	v.Printf("End doProtoc")
+	return nil
+}
+
+// GoogleAPIs makes the google protobuf APIs available to the build system
+func GoogleAPIs(b *builder.Builder, vars *utils.Variables) *builder.Task {
+	pkgName := "protobuf-google-apis"
+	t := builder.NewTask(b, pkgName)
 	v := vars.Copy("WORKSPACE", "PREFIX", "VERBOSE", "DOWNLOAD_DIR")
+	v["PACKAGE_DIR"] = path.Join("${WORKSPACE}", pkgName)
+	// TODO, we need git support again... go-gitter
+	v["SOURCES"] = packages.NewGit("github.com/googleapis/googleapis.git")
+	v.ResolveAll()
+	t.Variables = v
+	srcDir := v.Resolve("${PACKAGE_DIR}/googleapis-master")
+	t.DependsOn(packages.Download(b, &v))
+	t.DependsOn(packages.Install(b, &v, srcDir, v["PREFIX"].(string), 755))
+	t.AssignDefaultSignature()
+	return b.Add(t, builder.Message(t.Variables, "Protoc compiler installed"))
+}
+
+func appendOpts(v *utils.Variables, opts ...string) {
+	if o, ok := (*v)["PROTOC_OPTS"].([]string); !ok {
+		(*v)["PROTOC_OPTS"] = opts
+	} else {
+		(*v)["PROTOC_OPTS"] = append(o, opts...)
+	}
+}
+
+// ImportGoogleAPIs updates the include path for protoc to make the google apis
+// available
+func ImportGoogleAPIs(b *builder.Builder, vars *utils.Variables) *builder.Task {
+	t := builder.NewTask(b, "import-google-apis")
+	v := vars.Copy("PREFIX")
+	v.ResolveAll()
+	includeDir := v.Resolve("${PREFIX}/googleapis")
+	t.DependsOn(GoogleAPIs(b, vars))
+	t.RunAlwaysSignature()
+	appendOpts(vars, "-I"+includeDir)
+	return (b.Add(t, builder.Message(t.Variables, "Google APIs imported.")))
+}
+
+// Protoc runs the protoc compiler on a source.
+// THe include directories will be resolved at runtime and use
+// the includes that has been set by any dependencies.
+func Protoc(b *builder.Builder, vars *utils.Variables, args ...string) *builder.Task {
+	t := builder.NewTask(b, "Protoc")
+	v := vars.Copy("WORKSPACE", "PREFIX", "VERBOSE", "DOWNLOAD_DIR", "*PROTOC_OPTS")
+	v["ARGS"] = args
+	prefixIncl := path.Join(v["PREFIX"].(string), "include")
+	appendOpts(&v, "-I.", "-I"+prefixIncl)
 	t.Variables = v
 	t.DependsOn(InstallProtocGenGo(b, &t.Variables))
 	t.AssignDefaultSignature()

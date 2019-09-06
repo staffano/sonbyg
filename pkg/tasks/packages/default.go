@@ -22,6 +22,7 @@ type SrcSpec struct {
 	URI       string
 	MD5       string
 	LocalName string
+	Protocol  string // file or git
 }
 
 // Sources is a collection of SrcSpec
@@ -34,9 +35,13 @@ func (s *Sources) Add(uri, md5 string) {
 
 // NewSource is a helper function for easy creation of a single source
 func NewSource(url, md5 string) Sources {
-	return Sources{SrcSpec{URI: url, MD5: md5}}
+	return Sources{SrcSpec{URI: url, MD5: md5, Protocol: "file"}}
 }
 
+// NewGit ...
+func NewGit(url string) Sources {
+	return Sources{SrcSpec{URI: url, Protocol: "git"}}
+}
 func doExecute(v utils.Variables) *builder.Artifact {
 	v.Printf("Begin doExecute")
 	id := v["_TASK_ID"].(string)
@@ -67,25 +72,30 @@ func doDownload(v utils.Variables) *builder.Artifact {
 	v.Printf("Begin doDownload")
 	for _, s := range v["SOURCES"].(Sources) {
 		uri := v.Resolve(s.URI)
-		filePath := path.Join(v["DOWNLOAD_DIR"].(string), filepath.Base(uri))
-		v.Printf("Downloading %s", uri)
-		// Check if file exists
-		if !utils.FileExists(filePath) {
-			utils.DownloadFile(filePath, uri)
+		if s.Protocol == "file" || s.Protocol == "" {
+			dst := path.Join(v["DOWNLOAD_DIR"].(string), filepath.Base(uri))
+			v.Printf("Downloading %s", uri)
+			utils.DownloadFile(dst, uri)
+			fileMD5 := utils.FileMD5(dst)
+			hexMd5 := hex.EncodeToString(fileMD5)
+			if hexMd5 != s.MD5 {
+				log.Fatalf("MD5 checksum [%s] of downloaded file doesn't match expected [%s] checksum", hexMd5, s.MD5)
+			}
+			log.Printf("%s downloaded", uri)
+		} else if s.Protocol == "git" {
+			dst := path.Join(v["DOWNLOAD_DIR"].(string))
+			v.Printf("Downloading %s", uri)
+			utils.DownloadGit(dst, uri)
+			log.Printf("%s downloaded", uri)
 		}
-		fileMD5 := utils.FileMD5(filePath)
-		hexMd5 := hex.EncodeToString(fileMD5)
-		if hexMd5 != s.MD5 {
-			log.Fatalf("MD5 checksum [%s] of downloaded file doesn't match expected [%s] checksum", hexMd5, s.MD5)
-		}
-		log.Printf("%s downloaded", uri)
+
 	}
 	// We don't report an artifact for this
 	v.Printf("End doDownload")
 	return nil
 }
 
-// Download downloads all files specified in SOURCES
+// Download downloads all uris specified in SOURCES
 func Download(b *builder.Builder, v *utils.Variables) *builder.Task {
 	t := builder.NewTask(b, "download_sources")
 	t.Variables = v.Copy("DOWNLOAD_DIR", "SOURCES", "*VERBOSE", "*PATH")

@@ -21,7 +21,13 @@ func main() {
 		log.Fatalf("Could not determine PREFIX path")
 	}
 	utils.CreateDir(b.Variables["PREFIX"].(string), "", 755)
-	task := protobuf.Protoc(b, &b.Variables)
+
+	// Jag vill ha in importen från IGA till P. Hur gör jag?
+	// P->IGA inga problem
+	// IGA -> P Via variabler.
+	ga := protobuf.ImportGoogleAPIs(b, &b.Variables)
+	task := protobuf.Protoc(b, &b.Variables, "staffan")
+	task.DependsOn(ga)
 	b.DumpTasks()
 	b.Build(task)
 }

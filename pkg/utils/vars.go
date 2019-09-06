@@ -132,7 +132,7 @@ func (v Variables) Copy(keys ...string) Variables {
 			}
 		} else {
 			t := DeepCopy(val)
-			r[k] = t
+			r[key] = t
 		}
 	}
 	return r

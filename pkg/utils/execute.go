@@ -37,7 +37,7 @@ func Exec(id, outDir string, v Variables, cmd string, args ...string) {
 	// mw := io.MultiWriter(w, os.Stdout)
 	c.Stderr = os.Stdout
 	c.Stdout = os.Stdout
-	v.Printf("exec:\n  CWD=%s\n  CMD=%s\n  ARGS=%v\n  OUTDIR=%s", c.Dir, c.Path, c.Args, outDir)
+	log.Printf("exec:\n  CWD=%s\n  CMD=%s\n  ARGS=%v\n  OUTDIR=%s", c.Dir, c.Path, c.Args, outDir)
 	if err = c.Run(); err != nil {
 		log.Fatalf("Error running command %s :%v", cmd, err)
 	}
