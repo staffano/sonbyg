@@ -121,13 +121,19 @@ func (v Variables) Copy(keys ...string) Variables {
 	for _, k := range keys {
 		// First we do a shallow copy and then
 		// create the deep one
-		val, ok := v[k]
+		// Check if it's options (*VAR)
+		key := strings.TrimPrefix(k, "*")
+		optional := k[0] == '*'
+		val, ok := v[key]
 		if !ok {
-			debug.PrintStack()
-			log.Fatalf("Variable %s not found", k)
+			if !optional {
+				debug.PrintStack()
+				log.Fatalf("Variable %s not found", k)
+			}
+		} else {
+			t := DeepCopy(val)
+			r[k] = t
 		}
-		t := DeepCopy(val)
-		r[k] = t
 	}
 	return r
 }

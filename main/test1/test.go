@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	b := builder.NewBuilder(context.Background(), "../test", 1, true, "x86_64-w64-mingw32",
+	b := builder.NewBuilder(context.Background(), "../../test", 1, true, "x86_64-w64-mingw32",
 		"x86_64-w64-mingw32", "x86_64-w64-mingw32", "", "", "", "")
 	b.Variables["SYSROOT_DIR"] = path.Join(b.Variables.Get("WORKSPACE"), "sysroot")
 	b.Variables["PREFIX"] = path.Join(b.Variables["WORKSPACE"].(string), "install_dir")

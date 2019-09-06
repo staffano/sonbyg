@@ -4,6 +4,7 @@ import (
 	"encoding/gob"
 	"encoding/hex"
 	"log"
+	"os"
 	"path"
 	"path/filepath"
 
@@ -31,12 +32,20 @@ func (s *Sources) Add(uri, md5 string) {
 	*s = append(*s, SrcSpec{URI: uri, MD5: md5})
 }
 
+// NewSource is a helper function for easy creation of a single source
+func NewSource(url, md5 string) Sources {
+	return Sources{SrcSpec{URI: url, MD5: md5}}
+}
+
 func doExecute(v utils.Variables) *builder.Artifact {
 	v.Printf("Begin doExecute")
 	id := v["_TASK_ID"].(string)
 	cmd := v["EXEC_FILE"].(string)
 	args := v["ARGS"].([]string)
-	tmpDir := v["TMP_DIR"].(string)
+	tmpDir, ok := v["TMP_DIR"].(string)
+	if !ok {
+		tmpDir = os.TempDir()
+	}
 	utils.Exec(id, tmpDir, v, cmd, args...)
 	v.Printf("End doExecute")
 	return nil
@@ -45,7 +54,7 @@ func doExecute(v utils.Variables) *builder.Artifact {
 // Execute executes the file
 func Execute(b *builder.Builder, v *utils.Variables, executable string, args ...string) *builder.Task {
 	t := builder.NewTask(b, "Execute")
-	t.Variables = v.Copy("VERBOSE", "PATH", "TMP_DIR", "CWD")
+	t.Variables = v.Copy("all")
 	t.Variables["EXEC_FILE"] = executable
 	t.Variables["ARGS"] = args
 	t.Variables.ResolveAll()
@@ -79,7 +88,7 @@ func doDownload(v utils.Variables) *builder.Artifact {
 // Download downloads all files specified in SOURCES
 func Download(b *builder.Builder, v *utils.Variables) *builder.Task {
 	t := builder.NewTask(b, "download_sources")
-	t.Variables = v.Copy("DOWNLOAD_DIR", "SOURCES", "VERBOSE", "PATH")
+	t.Variables = v.Copy("DOWNLOAD_DIR", "SOURCES", "*VERBOSE", "*PATH")
 	t.Variables.ResolveAll()
 	t.AssignDefaultSignature()
 	v.Printf("Created Download Task")
@@ -121,12 +130,38 @@ func doUnpack(v utils.Variables) *builder.Artifact {
 // Unpack unpacks all files in the SOURCES variable into the build dir
 func Unpack(b *builder.Builder, v *utils.Variables) *builder.Task {
 	t := builder.NewTask(b, "Unpack-Package")
-	t.Variables = v.Copy("SOURCES", "PACKAGE_DIR", "DOWNLOAD_DIR", "VERBOSE", "PATH")
+	t.Variables = v.Copy("SOURCES", "PACKAGE_DIR", "DOWNLOAD_DIR", "*VERBOSE", "*PATH")
 	t.Variables.ResolveAll()
 	t.AssignDefaultSignature()
 	v.Printf("Created Unpack Task")
 	return b.Add(t, doUnpack)
 }
 
-// Patch applies all patches provided in the $BUILD_DIR/patches directory
-func Patch(b *builder.Builder, v *utils.Variables) *builder.Task { return nil }
+func doInstall(v utils.Variables) *builder.Artifact {
+	v.Printf("Begin doInstall")
+
+	src := v["SRC_DIR"].(string)
+	dst := v["DST_DIR"].(string)
+	mode := v["INSTALL_MODE"].(os.FileMode)
+
+	utils.Install(src, dst, mode)
+
+	v.Printf("End doInstall")
+	return nil
+}
+
+// Install will copy what's under src to dst and set it's mode. The behaviour depends
+// on if dst ends with a '/' or not. 'dst/' will copy src to 'dst/src', while 'dst'
+// will replace dst with src, potentially overwriting dst. Note that the dst and src
+// will be evaluated at time of the build, not at time of configuration.
+func Install(b *builder.Builder, v *utils.Variables, src, dst string, mode os.FileMode) *builder.Task {
+	t := builder.NewTask(b, "Install")
+	t.Variables = v.Copy("VERBOSE")
+	t.Variables["SRC_DIR"] = src
+	t.Variables["DST_DIR"] = dst
+	t.Variables["INSTALL_MODE"] = mode
+	t.Variables.ResolveAll()
+	t.AssignDefaultSignature()
+	v.Printf("Created Install Task %s -> %s (%d)", src, dst, mode)
+	return b.Add(t, doInstall)
+}

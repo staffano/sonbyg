@@ -325,3 +325,108 @@ func CopyDir(src, dst string) {
 		log.Panicf("Could not copy from %s to %s : %v", src, dst, err)
 	}
 }
+
+// IsDir checks if the path is a dir
+func IsDir(p string) bool {
+	info, err := os.Stat(p)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return info.IsDir()
+}
+
+// CopyFile copies a file from src to dst and setting the mode of dst
+func CopyFile(src, dst string, mode os.FileMode) {
+	dstPath := filepath.Dir(dst)
+	os.MkdirAll(dstPath, mode)
+	out, err := os.OpenFile(dst,
+		os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
+		mode,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer out.Close()
+	source, err := os.Open(src)
+	if err != nil {
+		log.Fatalf("Could not open src: [%s], err: %v", src, err)
+	}
+	defer source.Close()
+	_, err = io.Copy(out, source)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+// Install copies stuff from src to dst
+func Install(src, dst string, mode os.FileMode) {
+
+	var err error
+
+	if len(src) == 0 || len(dst) == 0 {
+		log.Fatalf("Empty paths not allowed. src: [%s], dst: [%s]", src, dst)
+	}
+
+	if !PathExists(src) {
+		log.Fatalf("The src path does not exist: %s", src)
+	}
+
+	// Check if overwrite or insert
+	overwrite := true
+	if dst[len(dst)-1] == '/' {
+		overwrite = false
+	}
+
+	// remove any trailing path separator from src, they don't matter
+	src = strings.TrimRight(src, "\\/")
+
+	if src, err = filepath.Abs(src); err != nil {
+		log.Fatalf("src path erroneous: %s, %v", src, err)
+	}
+	if dst, err = filepath.Abs(dst); err != nil {
+		log.Fatalf("dst path erroneous: %s, %v", dst, err)
+	}
+
+	src = filepath.ToSlash(src)
+	dst = filepath.ToSlash(dst)
+	// Handle the case when src is a single file
+	if FileExists(src) {
+		if !IsDir(dst) {
+			log.Fatalf("When src is a directory, the dst must also be a directory. src: %s, dst: %s", src, dst)
+		}
+		dstPath := path.Join(dst, filepath.Base(src))
+		CopyFile(src, dstPath, mode)
+		return
+	}
+	if !overwrite {
+		var sb strings.Builder
+		sb.WriteString(dst)
+		sb.WriteRune(os.PathSeparator)
+		sb.WriteString(filepath.Base(src))
+		dst = sb.String()
+	}
+
+	walkFn := func(p string, info os.FileInfo, err error) error {
+		if err != nil {
+			log.Printf("can't stat file %s: %v\n", p, err)
+			return err
+		}
+		p = filepath.ToSlash(p)
+		relDir := strings.TrimPrefix(p, src)
+		d := path.Join(dst, relDir)
+		if !info.IsDir() {
+			CopyFile(p, d, mode)
+		} else {
+			CreateDir(d, "", mode)
+		}
+		log.Printf("%s", d)
+		return nil
+	}
+
+	log.Printf("Copying from dst=%s", dst)
+	err = filepath.Walk(src, walkFn)
+	if err != nil {
+		log.Fatalf("Could not Install src: %s, dst %s  %v", src, dst, err)
+	}
+	return
+}

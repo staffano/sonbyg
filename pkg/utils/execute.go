@@ -26,7 +26,10 @@ func Exec(id, outDir string, v Variables, cmd string, args ...string) {
 
 	v.ImportEnv(os.Environ())
 	if runtime.GOOS == "windows" {
-		v["Path"] = v["PATH"]
+		pth, ok := v["PATH"].(string)
+		if ok {
+			v["Path"] = pth
+		}
 	}
 	c.Env = v.ExportEnv()
 	// w := bufio.NewWriter(outfile)

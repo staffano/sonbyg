@@ -13,3 +13,5 @@
 
 test/
 debug
+/dependencies
+.sonbyg
