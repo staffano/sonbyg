@@ -4,7 +4,7 @@ diff -Naur msys64/etc/pacman.conf msys64B/etc/pacman.conf
 @@ -37,8 +37,8 @@
  
  # By default, pacman accepts packages signed by keys that its local keyring
- # trusts (see pacman-key and its man page), as well as unsigned packages.
+ # trusts (see pacman-key and its man page), as well as unsigned base.
 -#SigLevel = Never
 -SigLevel    = Required DatabaseOptional
 +SigLevel = Never

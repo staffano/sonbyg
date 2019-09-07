@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"time"
@@ -70,4 +71,31 @@ func FileMD5(path string) []byte {
 		log.Fatal(err)
 	}
 	return h.Sum(nil)
+}
+
+// DownloadGit downloads a url in the form
+// src = https://github.com/staffano/sonbyg
+// git clone https://github.com/staffano/sonbyg
+// dst is the directory that maps to sonbyg.
+func DownloadGit(src, dst string) {
+	v := Variables{}
+	ref := "master"
+	su, _ := url.Parse(src)
+	q := su.Query()
+	if len(q) > 0 {
+		ref = q.Get("ref")
+	}
+
+	u2 := url.URL{Scheme: su.Scheme, Host: su.Host, Path: su.Path}
+	if IsDir(dst) {
+		v["CWD"] = dst
+		Exec("GitCheckoutRef", os.TempDir(), v, "git", "checkout", "master")
+		Exec("GitPull", os.TempDir(), v, "git", "pull", "--depth", "1", "--ff-onley")
+	} else {
+		v["CWD"] = filepath.Dir(dst)
+		Exec("GitClone", os.TempDir(), v, "git", "clone", "--depth", "1", u2.String(), dst)
+	}
+	v["CWD"] = dst
+	Exec("GitCheckoutRef", os.TempDir(), v, "git", "checkout", ref)
+	Exec("GitUpdateSubmodules", os.TempDir(), v, "git", "submodule", "update", "--init", "--recursive", "--depth", "1")
 }

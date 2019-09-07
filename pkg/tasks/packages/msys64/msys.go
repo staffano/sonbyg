@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/staffano/sonbyg/pkg/builder"
-	"github.com/staffano/sonbyg/pkg/tasks/packages"
+	"github.com/staffano/sonbyg/pkg/tasks/packages/base"
 	"github.com/staffano/sonbyg/pkg/tasks/packages/assets"
 	"github.com/staffano/sonbyg/pkg/tasks/packages/diff"
 	msys_assets "github.com/staffano/sonbyg/pkg/tasks/packages/msys64/data"
@@ -158,7 +158,7 @@ func BuildSystem(b *builder.Builder, vars *utils.Variables) *builder.Task {
 	pkgName := "msys64"
 	t := builder.NewTask(b, "install-build-system")
 	v := vars.Copy("WORKSPACE", "TARGET", "HOST", "BUILD", "DOWNLOAD_DIR", "PREFIX", "VERBOSE", "PATH")
-	srcs := packages.Sources{}
+	srcs := base.Sources{}
 	srcs.Add("http://repo.msys2.org/distrib/x86_64/msys2-base-x86_64-20190524.tar.xz", "b9fddc5a8ea27d5f0eed232795e99725")
 
 	v["PACKAGE_DIR"] = path.Join("${WORKSPACE}", pkgName)
@@ -177,8 +177,8 @@ func BuildSystem(b *builder.Builder, vars *utils.Variables) *builder.Task {
 
 	assts := assets.Unpack(b, "msys_assets", msys_assets.Assets, t.Variables["ASSETS_DIR"].(string))
 	patch := diff.Patch(b, &t.Variables, t.Variables["SRC_DIR"].(string), mirrorsPatch)
-	dwnld := packages.Download(b, &t.Variables)
-	unpck := packages.Unpack(b, &t.Variables)
+	dwnld := base.Download(b, &t.Variables)
+	unpck := base.Unpack(b, &t.Variables)
 	installBase := RunCmd(b, &t.Variables, ".", "pacman -S base --force --noconfirm")
 	upgrd := UpgradeBuildSystem(b, &t.Variables)
 	instl := RunCmd(b, &t.Variables, ".", "pacman --noconfirm -S --needed base-devel mingw-w64-x86_64-toolchain")

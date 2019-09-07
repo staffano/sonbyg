@@ -155,6 +155,17 @@ func (b *Builder) IsStamped(t *Task) bool {
 // duplicated task.
 func (b *Builder) Add(task *Task, op Operation) *Task {
 	if t, ok := b.tasks[string(task.Signature)]; ok {
+
+		// Copy over any dependencies t have that task doesn't.
+	loop1:
+		for _, d := range task.Dependencies {
+			for _, d2 := range t.Dependencies {
+				if d.Signature == d2.Signature {
+					continue loop1
+				}
+			}
+			t.DependsOn(d)
+		}
 		return t
 	}
 	b.tasks[string(task.Signature)] = task

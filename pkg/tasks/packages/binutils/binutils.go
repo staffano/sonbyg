@@ -4,7 +4,7 @@ import (
 	"path"
 
 	"github.com/staffano/sonbyg/pkg/builder"
-	"github.com/staffano/sonbyg/pkg/tasks/packages"
+	"github.com/staffano/sonbyg/pkg/tasks/packages/base"
 	"github.com/staffano/sonbyg/pkg/tasks/packages/msys64"
 	"github.com/staffano/sonbyg/pkg/utils"
 )
@@ -15,7 +15,7 @@ import (
 func Binutils(b *builder.Builder, vars *utils.Variables, version string) *builder.Task {
 	vars.Printf("Binutils Begin Create")
 	t := builder.NewTask(b, "Binutils")
-	srcs := packages.Sources{}
+	srcs := base.Sources{}
 	pkgName := "${PN}-${PV}"
 	srcs.Add("http://ftp.acc.umu.se/mirror/gnu.org/gnu/binutils/binutils-${PV}.tar.bz2", "84edf97113788f106d6ee027f10b046a")
 
@@ -43,8 +43,8 @@ func Binutils(b *builder.Builder, vars *utils.Variables, version string) *builde
 	b.EstablishPath(744, v["PACKAGE_DIR"].(string))
 	b.EstablishPath(744, v["TMP_DIR"].(string))
 
-	download := packages.Download(b, &t.Variables)
-	unpack := packages.Unpack(b, &t.Variables)
+	download := base.Download(b, &t.Variables)
+	unpack := base.Unpack(b, &t.Variables)
 	configure := msys64.Configure(b, &t.Variables)
 	compile := msys64.Make(b, &t.Variables, "all")
 	install := msys64.Make(b, &t.Variables, "install")

@@ -1,4 +1,4 @@
-package packages
+package base
 
 import (
 	"encoding/gob"
@@ -39,8 +39,8 @@ func NewSource(url, md5 string) Sources {
 }
 
 // NewGit ...
-func NewGit(url string) Sources {
-	return Sources{SrcSpec{URI: url, Protocol: "git"}}
+func NewGit(url string, localpath string) Sources {
+	return Sources{SrcSpec{URI: url, Protocol: "git", LocalName: localpath}}
 }
 func doExecute(v utils.Variables) *builder.Artifact {
 	v.Printf("Begin doExecute")
@@ -83,9 +83,9 @@ func doDownload(v utils.Variables) *builder.Artifact {
 			}
 			log.Printf("%s downloaded", uri)
 		} else if s.Protocol == "git" {
-			dst := path.Join(v["DOWNLOAD_DIR"].(string))
+			dst := s.LocalName
 			v.Printf("Downloading %s", uri)
-			utils.DownloadGit(dst, uri)
+			utils.DownloadGit(uri, dst)
 			log.Printf("%s downloaded", uri)
 		}
 
@@ -97,6 +97,17 @@ func doDownload(v utils.Variables) *builder.Artifact {
 
 // Download downloads all uris specified in SOURCES
 func Download(b *builder.Builder, v *utils.Variables) *builder.Task {
+	t := builder.NewTask(b, "download_sources")
+	t.Variables = v.Copy("DOWNLOAD_DIR", "SOURCES", "*VERBOSE", "*PATH")
+	t.Variables.ResolveAll()
+	t.DependsOn(Git(b, v))
+	t.AssignDefaultSignature()
+	v.Printf("Created Download Task")
+	return b.Add(t, doDownload)
+}
+
+// DownloadFile downloads all uris specified in SOURCES
+func DownloadFile(b *builder.Builder, v *utils.Variables) *builder.Task {
 	t := builder.NewTask(b, "download_sources")
 	t.Variables = v.Copy("DOWNLOAD_DIR", "SOURCES", "*VERBOSE", "*PATH")
 	t.Variables.ResolveAll()

@@ -1,22 +1,21 @@
 // +build windows
 
-package git
+package base
 
 import (
 	"path"
 	"path/filepath"
 
 	"github.com/staffano/sonbyg/pkg/builder"
-	"github.com/staffano/sonbyg/pkg/tasks/packages"
 	"github.com/staffano/sonbyg/pkg/utils"
 )
 
 // Git will install git and expose the git command
 func Git(b *builder.Builder, vars *utils.Variables) *builder.Task {
 	t := builder.NewTask(b, "git")
-	v := vars.Copy("WORKSPACE", "DOWNLOAD_DIR", "VERBOSE", "PATH")
+	v := vars.Copy("WORKSPACE", "DOWNLOAD_DIR", "VERBOSE", "*PATH")
 
-	srcs := packages.Sources{}
+	srcs := Sources{}
 	pkgName := "${PN}-${PV}"
 	srcs.Add("https://github.com/git-for-windows/git/releases/download/v${PV}.windows.1/MinGit-${PV}-busybox-64-bit.zip", "26076d95a90fdf5145d72d41ae396f24")
 	v["SOURCES"] = srcs
@@ -30,8 +29,8 @@ func Git(b *builder.Builder, vars *utils.Variables) *builder.Task {
 
 	b.EstablishPath(744, v["PACKAGE_DIR"].(string))
 
-	download := packages.Download(b, &t.Variables)
-	unpack := packages.Unpack(b, &t.Variables)
+	download := DownloadFile(b, &t.Variables)
+	unpack := Unpack(b, &t.Variables)
 
 	unpack.DependsOn(download)
 	t.DependsOn(unpack)

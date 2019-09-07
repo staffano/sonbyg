@@ -6,7 +6,7 @@ import (
 	"path"
 
 	"github.com/staffano/sonbyg/pkg/builder"
-	"github.com/staffano/sonbyg/pkg/tasks/packages"
+	"github.com/staffano/sonbyg/pkg/tasks/packages/base"
 	"github.com/staffano/sonbyg/pkg/utils"
 )
 
@@ -21,12 +21,14 @@ func InstallProtoc(b *builder.Builder, vars *utils.Variables) *builder.Task {
 	t := builder.NewTask(b, "InstallProtoc")
 	v := vars.Copy("WORKSPACE", "PREFIX", "VERBOSE", "DOWNLOAD_DIR")
 	v["PACKAGE_DIR"] = path.Join("${WORKSPACE}", pkgName)
-	v["SOURCES"] = packages.NewSource("https://github.com/protocolbuffers/protobuf/releases/download/v3.9.1/protoc-3.9.1-win64.zip", "535d2d23004f90067ee1d3cb2599d0e5")
+	v["SOURCES"] = base.NewSource("https://github.com/protocolbuffers/protobuf/releases/download/v3.9.1/protoc-3.9.1-win64.zip", "535d2d23004f90067ee1d3cb2599d0e5")
 	v.ResolveAll()
 	t.Variables = v
-	t.DependsOn(packages.Download(b, &v))
-	t.DependsOn(packages.Unpack(b, &v))
-	t.DependsOn(packages.Install(b, &v, v["PACKAGE_DIR"].(string), v["PREFIX"].(string), 755))
+	t.DependsOnSerial(
+		base.Download(b, &v),
+		base.Unpack(b, &v),
+		base.Install(b, &v, v["PACKAGE_DIR"].(string), v["PREFIX"].(string), 755),
+	)
 	t.AssignDefaultSignature()
 	return b.Add(t, builder.Message(t.Variables, "Protoc compiler installed"))
 }
@@ -44,7 +46,7 @@ func InstallProtocGenGo(b *builder.Builder, vars *utils.Variables) *builder.Task
 
 	protocGenGoURL := "github.com/golang/protobuf/protoc-gen-go"
 	t.Variables = v
-	e := packages.Execute(b, &t.Variables, "go", "get", "-u", protocGenGoURL)
+	e := base.Execute(b, &t.Variables, "go", "get", "-u", protocGenGoURL)
 
 	t.DependsOn(InstallProtoc(b, &t.Variables))
 	t.DependsOn(e)
@@ -79,14 +81,18 @@ func GoogleAPIs(b *builder.Builder, vars *utils.Variables) *builder.Task {
 	t := builder.NewTask(b, pkgName)
 	v := vars.Copy("WORKSPACE", "PREFIX", "VERBOSE", "DOWNLOAD_DIR")
 	v["PACKAGE_DIR"] = path.Join("${WORKSPACE}", pkgName)
-	// TODO, we need git support again... go-gitter
-	v["SOURCES"] = packages.NewGit("github.com/googleapis/googleapis.git")
+	repoDir := "${PACKAGE_DIR}/" + pkgName
+	googleDir := v.Resolve(path.Join("${PACKAGE_DIR}", pkgName, "google"))
+	installDir := v.Resolve("${PREFIX}/include/googleapis")
+	v["SOURCES"] = base.NewGit("https://github.com/googleapis/googleapis.git?ref=master", repoDir)
 	v.ResolveAll()
 	t.Variables = v
-	srcDir := v.Resolve("${PACKAGE_DIR}/googleapis-master")
-	t.DependsOn(packages.Download(b, &v))
-	t.DependsOn(packages.Install(b, &v, srcDir, v["PREFIX"].(string), 755))
+	t.DependsOnSerial(
+		base.Download(b, &v),
+		base.Install(b, &v, googleDir, installDir, 755),
+	)
 	t.AssignDefaultSignature()
+	b.EstablishPath(744, v["PACKAGE_DIR"].(string))
 	return b.Add(t, builder.Message(t.Variables, "Protoc compiler installed"))
 }
 
@@ -102,9 +108,9 @@ func appendOpts(v *utils.Variables, opts ...string) {
 // available
 func ImportGoogleAPIs(b *builder.Builder, vars *utils.Variables) *builder.Task {
 	t := builder.NewTask(b, "import-google-apis")
-	v := vars.Copy("PREFIX")
-	v.ResolveAll()
-	includeDir := v.Resolve("${PREFIX}/googleapis")
+	t.Variables = vars.Copy("PREFIX")
+	t.Variables.ResolveAll()
+	includeDir := t.Variables.Resolve("${PREFIX}/include/googleapis")
 	t.DependsOn(GoogleAPIs(b, vars))
 	t.RunAlwaysSignature()
 	appendOpts(vars, "-I"+includeDir)

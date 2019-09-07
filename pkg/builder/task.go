@@ -85,6 +85,15 @@ append_loop:
 	}
 }
 
+// DependsOnSerial makes t depend on d_N, d_N on d_N-1, etc
+func (t *Task) DependsOnSerial(d ...*Task) {
+	t.DependsOn(d[len(d)-1])
+	for i := len(d) - 1; i > 0; i-- {
+		d[i].DependsOn(d[i-1])
+	}
+
+}
+
 // DumpStr will show interesting stuff in da string...
 func (t *Task) DumpStr(deps bool) string {
 	var sb strings.Builder

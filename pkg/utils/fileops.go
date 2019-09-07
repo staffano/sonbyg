@@ -38,23 +38,6 @@ func CreateDir(targetDir, dirPath string, mode os.FileMode) {
 	os.MkdirAll(path.Join(targetDir, dirPath), mode)
 }
 
-
-// FileMD5 calculates the MD5 sum of a file
-func FileMD5(path string) []byte {
-
-	f, err := os.Open(path)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-
-	h := md5.New()
-	if _, err := io.Copy(h, f); err != nil {
-		log.Fatal(err)
-	}
-	return h.Sum(nil)
-}
-
 // FileExists returns true if there is a file at the path
 func FileExists(filename string) bool {
 	info, err := os.Stat(filename)
