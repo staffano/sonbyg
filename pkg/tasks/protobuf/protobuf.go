@@ -2,8 +2,10 @@ package protobuf
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/staffano/sonbyg/pkg/builder"
 	"github.com/staffano/sonbyg/pkg/tasks/packages/base"
@@ -47,7 +49,7 @@ func InstallProtocGenGo(b *builder.Builder, vars *utils.Variables) *builder.Task
 	protocGenGoURL := "github.com/golang/protobuf/protoc-gen-go"
 	t.Variables = v
 	e := base.Execute(b, &t.Variables, "go", "get", "-u", protocGenGoURL)
-
+	
 	t.DependsOn(InstallProtoc(b, &t.Variables))
 	t.DependsOn(e)
 
@@ -60,16 +62,10 @@ func doProtoc(v utils.Variables) *builder.Artifact {
 	args := v["ARGS"].([]string)
 	includes := v["PROTOC_OPTS"].([]string)
 	prefixBin := path.Join(v["PREFIX"].(string), "bin")
-	protocExe := path.Join(prefixBin, "protoc.exe")
+	protocExe,_ := filepath.Abs(path.Join(prefixBin, "protoc.exe"))
 	tmpdir := os.TempDir()
-
-	// Build option list to protoc
-	opts := []string{}
-	for _, i := range includes {
-		opts = append(opts, "-I"+i)
-	}
-	opts = append(opts, args...)
-	v.PrependEnv("PATH", prefixBin)
+	opts := append(includes, args...)
+	v["PATH_PREPEND"] = prefixBin
 	utils.Exec("protoc", tmpdir, v, protocExe, opts...)
 	v.Printf("End doProtoc")
 	return nil
@@ -100,7 +96,7 @@ func appendOpts(v *utils.Variables, opts ...string) {
 	if o, ok := (*v)["PROTOC_OPTS"].([]string); !ok {
 		(*v)["PROTOC_OPTS"] = opts
 	} else {
-		(*v)["PROTOC_OPTS"] = append(o, opts...)
+		(*v)["PROTOC_OPTS"] = append(opts, o...)
 	}
 }
 
@@ -120,15 +116,20 @@ func ImportGoogleAPIs(b *builder.Builder, vars *utils.Variables) *builder.Task {
 // Protoc runs the protoc compiler on a source.
 // THe include directories will be resolved at runtime and use
 // the includes that has been set by any dependencies.
-func Protoc(b *builder.Builder, vars *utils.Variables, args ...string) *builder.Task {
+func Protoc(b *builder.Builder, vars *utils.Variables, cwd string, args ...string) *builder.Task {
 	t := builder.NewTask(b, "Protoc")
-	v := vars.Copy("WORKSPACE", "PREFIX", "VERBOSE", "DOWNLOAD_DIR", "*PROTOC_OPTS")
+	v := vars.Copy("WORKSPACE", "PREFIX", "VERBOSE", "DOWNLOAD_DIR", "*PROTOC_OPTS", "*PATH")
 	v["ARGS"] = args
+	var err error
+	v["CWD"], err = filepath.Abs(cwd)
+	if err != nil {
+		log.Fatalf("Could not determine CWD, %v", err)
+	}
 	prefixIncl := path.Join(v["PREFIX"].(string), "include")
 	appendOpts(&v, "-I.", "-I"+prefixIncl)
 	t.Variables = v
 	t.DependsOn(InstallProtocGenGo(b, &t.Variables))
-	t.AssignDefaultSignature()
+	t.RunAlwaysSignature()
 	v.Printf("Created ExecuteBash Task")
-	return b.Add(t, builder.Message(t.Variables, fmt.Sprintf("protoc installed")))
+	return b.Add(t, doProtoc)
 }

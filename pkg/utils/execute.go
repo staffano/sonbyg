@@ -23,18 +23,20 @@ func Exec(id, outDir string, v Variables, cmd string, args ...string) {
 	if cwd, ok := v["CWD"]; ok {
 		c.Dir = cwd.(string)
 	}
-
-	v.ImportEnv(os.Environ())
-	if runtime.GOOS == "windows" {
-		pth, ok := v["PATH"].(string)
-		if ok {
-			v["Path"] = pth
+	pth, ok := v["PATH_PREPEND"].(string)
+	if ok {
+		tv := NewVariables(os.Environ())
+		if runtime.GOOS == "windows" {
+			tv.PrependEnv("Path", pth)
+		} else {
+			tv.PrependEnv("PATH", pth)
 		}
+		c.Env = v.ExportEnv()
 	}
-	c.Env = v.ExportEnv()
 	// w := bufio.NewWriter(outfile)
 	// defer w.Flush()
 	// mw := io.MultiWriter(w, os.Stdout)
+	// v.Dump()
 	c.Stderr = os.Stdout
 	c.Stdout = os.Stdout
 	log.Printf("exec:\n  CWD=%s\n  CMD=%s\n  ARGS=%v\n  OUTDIR=%s", c.Dir, c.Path, c.Args, outDir)

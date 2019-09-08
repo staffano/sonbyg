@@ -15,6 +15,7 @@ import (
 
 	"github.com/ulikunitz/xz"
 )
+
 const (
 	// CompressorNone - uncompressed file
 	CompressorNone = iota
@@ -72,20 +73,17 @@ func UnpackFile(filePath string, targetDir string) {
 	var src io.Reader
 
 	if compressor == CompressorZip {
+		//	Unzip(filePath, targetDir)
 		src, _ := zip.OpenReader(filePath)
+		defer src.Close()
 		for _, file := range src.Reader.File {
-			zippedFile, err := file.Open()
-			if err != nil {
-				log.Fatal(err)
-			}
-			defer zippedFile.Close()
 			if file.FileInfo().IsDir() {
 				CreateDir(targetDir, file.Name, file.Mode())
 			} else {
-				CreateFile(zippedFile, targetDir, file.Name, file.Mode())
+				CreateFile2(file, targetDir, file.Name, file.Mode())
 			}
 		}
-
+		log.Printf("Unzip done")
 		return
 	}
 	// Get mode of archive
@@ -166,4 +164,65 @@ func UnpackFile(filePath string, targetDir string) {
 			log.Fatalf("Unknown tar tag type [%d] for tag [%s]", hdr.Typeflag, hdr.Name)
 		}
 	}
+}
+
+// Unzip ...
+// cf. https://stackoverflow.com/a/24792688
+func Unzip(src, dest string) error {
+	r, err := zip.OpenReader(src)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := r.Close(); err != nil {
+			panic(err)
+		}
+	}()
+
+	os.MkdirAll(dest, 0755)
+
+	// Closure to address file descriptors issue with all the deferred .Close() methods
+	extractAndWriteFile := func(f *zip.File) error {
+		rc, err := f.Open()
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if err := rc.Close(); err != nil {
+				panic(err)
+			}
+		}()
+
+		path := filepath.Join(dest, f.Name)
+		log.Printf("%s", path)
+		if f.FileInfo().IsDir() {
+			os.MkdirAll(path, f.Mode())
+		} else {
+			os.MkdirAll(filepath.Dir(path), f.Mode())
+			f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+			if err != nil {
+				return err
+			}
+			defer func() {
+				if err := f.Close(); err != nil {
+					panic(err)
+				}
+			}()
+
+			_, err = io.Copy(f, rc)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	for _, f := range r.File {
+		err := extractAndWriteFile(f)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

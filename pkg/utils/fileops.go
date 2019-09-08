@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"archive/zip"
 	"fmt"
 	"io"
 	"log"
@@ -12,6 +13,56 @@ import (
 
 	"github.com/otiai10/copy"
 )
+
+// CreateFile2 creates a file from an io.Reader with a given mode
+func CreateFile2(file *zip.File, targetdir, filename string, mode os.FileMode) {
+	filePath := path.Join(targetdir, filename)
+	// Make sure the directory exists...
+	dstPath := filepath.Dir(filePath)
+	os.MkdirAll(dstPath, mode)
+
+	src, err := file.Open()
+	if err != nil {
+		log.Fatalf("Could not read from zip archive %v", err)
+	}
+	defer src.Close()
+
+	dst, err := os.OpenFile(filePath,
+		os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
+		mode,
+	)
+	if err != nil {
+		log.Fatalf("Could not create file %v", err)
+	}
+	log.Println(filePath)
+	defer dst.Close()
+
+	buf := make([]byte, 16384)
+
+	for {
+
+		nr, er := src.Read(buf)
+
+		if nr > 0 {
+			if er != nil && er != io.EOF {
+				log.Fatalf("Error reading file %v", err)
+			}
+
+			nw, ew := dst.Write(buf[0:nr])
+
+			//			fmt.Printf("->[%d ,%v] ", nw, ew)
+			if nw != nr {
+				log.Fatalf("Could not write all data to file")
+			}
+			if ew != nil {
+				log.Fatalf("Error writing to file %v", err)
+			}
+		}
+		if er == io.EOF {
+			break
+		}
+	}
+}
 
 // CreateFile creates a file from an io.Reader with a given mode
 func CreateFile(src io.Reader, targetdir, filename string, mode os.FileMode) {
@@ -26,11 +77,11 @@ func CreateFile(src io.Reader, targetdir, filename string, mode os.FileMode) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer out.Close()
 	_, err = io.Copy(out, src)
 	if err != nil {
 		log.Fatal(err)
 	}
+	out.Close()
 }
 
 // CreateDir creates a directory at the given path.
@@ -198,7 +249,6 @@ func Install(src, dst string, mode os.FileMode) {
 		} else {
 			CreateDir(d, "", mode)
 		}
-		log.Printf("%s", d)
 		return nil
 	}
 

@@ -22,11 +22,8 @@ func main() {
 	}
 	utils.CreateDir(b.Variables["PREFIX"].(string), "", 755)
 
-	// Jag vill ha in importen från IGA till P. Hur gör jag?
-	// P->IGA inga problem
-	// IGA -> P Via variabler.
 	ga := protobuf.ImportGoogleAPIs(b, &b.Variables)
-	task := protobuf.Protoc(b, &b.Variables, "staffan")
+	task := protobuf.Protoc(b, &b.Variables, ".", "--go_out=output", "test.proto")
 	task.DependsOn(ga)
 	b.DumpTasks()
 	b.Build(task)

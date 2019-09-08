@@ -283,11 +283,14 @@ func (b *Builder) Build(tasks ...*Task) {
 		}
 	}
 	log.Printf("%d tasks already done", c)
+
 	var targetsLeft bool
 	for {
 		targetsLeft = false
-		for _, rt := range b.resolvedTasks {
 
+		// Select eligible target
+		var ts *Task
+		for _, rt := range b.resolvedTasks {
 			if rt.IsDone() {
 				continue
 			}
@@ -298,16 +301,34 @@ func (b *Builder) Build(tasks ...*Task) {
 			if b.IsAssignedToWorker(rt) {
 				continue
 			}
-			w := b.GetFreeWorker()
-			w.Work(b, rt)
+			ts = rt
+			break
 		}
-		if !targetsLeft {
+
+		if ts != nil {
+			// There is work to be done.
+			// Select a free worker, or wait
+			// for a worker to be free and then
+			// start the task
+			w := b.GetFreeWorker()
+			w.Work(b, ts)
+			continue
+		}
+
+		// Check if all targets built and quit.
+		if ts == nil && !targetsLeft {
 			log.Printf("Done building all targets")
 			if b.Verbose {
 				b.ReportWorkerUtilization()
 			}
 			return
 		}
+
+		// Tasks left, but no task available for executing
+		// This means that there is tasks executing that has
+		// dependencies. Wait until a worker reported done
+		// before evaluating task execution again.
+		<-b.workerDoneChan
 	}
 }
 

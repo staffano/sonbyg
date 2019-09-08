@@ -35,6 +35,24 @@
                 "maxArrayValues": 64,
                 "maxStructFields": -1
             }
+        },
+        {
+            "name": "install_protoc-exe",
+            "type": "go",
+            "request": "launch",
+            "mode": "exec",
+            "program": "${workspaceFolder}/main/install_protoc/install_protoc.exe",
+            "env": {
+                "GOGC": "off"
+            },
+            "args": [],
+            "dlvLoadConfig": {
+                "followPointers": true,
+                "maxVariableRecurse": 1,
+                "maxStringLen": 500,
+                "maxArrayValues": 64,
+                "maxStructFields": -1
+            }
         }
     ]
 }

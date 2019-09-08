@@ -90,7 +90,7 @@ func DownloadGit(src, dst string) {
 	if IsDir(dst) {
 		v["CWD"] = dst
 		Exec("GitCheckoutRef", os.TempDir(), v, "git", "checkout", "master")
-		Exec("GitPull", os.TempDir(), v, "git", "pull", "--depth", "1", "--ff-onley")
+		Exec("GitPull", os.TempDir(), v, "git", "pull", "--depth", "1", "--ff-only")
 	} else {
 		v["CWD"] = filepath.Dir(dst)
 		Exec("GitClone", os.TempDir(), v, "git", "clone", "--depth", "1", u2.String(), dst)

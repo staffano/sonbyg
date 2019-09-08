@@ -70,7 +70,9 @@ func (v *Variables) Append(vals Variables) {
 func (v *Variables) ImportEnv(env []string) {
 	for _, vi := range env {
 		pair := strings.Split(vi, "=")
-		(*v)[pair[0]] = pair[1]
+		if len(pair[0]) > 0 {
+			(*v)[pair[0]] = pair[1]
+		}
 	}
 }
 
