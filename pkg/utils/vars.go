@@ -106,7 +106,6 @@ func (v *Variables) PrependEnv(key string, value string) {
 		return
 	}
 	(*v)[key] = fmt.Sprintf("%s%c%s", value, os.PathListSeparator, vv)
-	log.Println((*v)[key])
 }
 
 // Copy will select the keys from variables and create a new

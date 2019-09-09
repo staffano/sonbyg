@@ -49,7 +49,7 @@ func InstallProtocGenGo(b *builder.Builder, vars *utils.Variables) *builder.Task
 	protocGenGoURL := "github.com/golang/protobuf/protoc-gen-go"
 	t.Variables = v
 	e := base.Execute(b, &t.Variables, "go", "get", "-u", protocGenGoURL)
-	
+
 	t.DependsOn(InstallProtoc(b, &t.Variables))
 	t.DependsOn(e)
 
@@ -62,7 +62,7 @@ func doProtoc(v utils.Variables) *builder.Artifact {
 	args := v["ARGS"].([]string)
 	includes := v["PROTOC_OPTS"].([]string)
 	prefixBin := path.Join(v["PREFIX"].(string), "bin")
-	protocExe,_ := filepath.Abs(path.Join(prefixBin, "protoc.exe"))
+	protocExe, _ := filepath.Abs(path.Join(prefixBin, "protoc.exe"))
 	tmpdir := os.TempDir()
 	opts := append(includes, args...)
 	v["PATH_PREPEND"] = prefixBin
@@ -118,6 +118,7 @@ func ImportGoogleAPIs(b *builder.Builder, vars *utils.Variables) *builder.Task {
 // the includes that has been set by any dependencies.
 func Protoc(b *builder.Builder, vars *utils.Variables, cwd string, args ...string) *builder.Task {
 	t := builder.NewTask(b, "Protoc")
+	t.RunAlways = true
 	v := vars.Copy("WORKSPACE", "PREFIX", "VERBOSE", "DOWNLOAD_DIR", "*PROTOC_OPTS", "*PATH")
 	v["ARGS"] = args
 	var err error
@@ -129,7 +130,7 @@ func Protoc(b *builder.Builder, vars *utils.Variables, cwd string, args ...strin
 	appendOpts(&v, "-I.", "-I"+prefixIncl)
 	t.Variables = v
 	t.DependsOn(InstallProtocGenGo(b, &t.Variables))
-	t.RunAlwaysSignature()
+	t.AssignDefaultSignature()
 	v.Printf("Created ExecuteBash Task")
 	return b.Add(t, doProtoc)
 }

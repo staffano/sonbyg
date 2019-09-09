@@ -20,6 +20,7 @@ type Task struct {
 	Dependencies []*Task
 	Variables    utils.Variables
 	Signature    string
+	RunAlways    bool
 	done         bool
 }
 

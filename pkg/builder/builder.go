@@ -229,11 +229,9 @@ func (a Artifact) Apply(workdir string) {
 func (b *Builder) Build(tasks ...*Task) {
 	parents := []*Task{}
 	// Resolve Dependencies
-	log.Println("Start resolving")
 	for _, t := range tasks {
 		b.checkDep(parents, t)
 	}
-	log.Println("Done Resolving")
 
 	// ResolvedTargets are now listed in dependency order.
 	// The first item have no dependency to anyone.

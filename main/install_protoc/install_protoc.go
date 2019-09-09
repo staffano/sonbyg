@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	b := builder.NewBuilder(context.Background(), "", 1, true, "x86_64-w64-mingw32",
+	b := builder.NewBuilder(context.Background(), "", 1, false, "x86_64-w64-mingw32",
 		"x86_64-w64-mingw32", "x86_64-w64-mingw32", "", "", "", "")
 	var err error
 	b.Variables["PREFIX"], err = filepath.Abs("../../dependencies")
@@ -25,6 +25,6 @@ func main() {
 	ga := protobuf.ImportGoogleAPIs(b, &b.Variables)
 	task := protobuf.Protoc(b, &b.Variables, ".", "--go_out=output", "test.proto")
 	task.DependsOn(ga)
-	b.DumpTasks()
+	//	b.DumpTasks()
 	b.Build(task)
 }

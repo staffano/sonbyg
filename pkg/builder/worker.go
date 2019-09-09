@@ -37,7 +37,9 @@ func (w *Worker) Work(b *Builder, t *Task) {
 		w.workingOn = nil
 		w.free = true
 		w.lock.Unlock()
-		b.Stamp(t)
+		if !t.RunAlways {
+			b.Stamp(t)
+		}
 		w.workerDoneChannel <- true
 	}()
 }
