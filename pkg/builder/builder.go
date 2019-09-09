@@ -275,6 +275,8 @@ func (b *Builder) Build(tasks ...*Task) {
 	// Find tasks that are already done according to stamps directory
 	c := 0
 	for _, rs := range b.resolvedTasks {
+		// If the task should always run, then don' considering
+		// it for done marking.
 		if b.IsStamped(rs) {
 			rs.MarkDone()
 			c++

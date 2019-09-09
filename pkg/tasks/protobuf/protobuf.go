@@ -1,7 +1,6 @@
 package protobuf
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"path"
@@ -9,6 +8,7 @@ import (
 
 	"github.com/staffano/sonbyg/pkg/builder"
 	"github.com/staffano/sonbyg/pkg/tasks/packages/base"
+	"github.com/staffano/sonbyg/pkg/tasks/packages/gogo"
 	"github.com/staffano/sonbyg/pkg/utils"
 )
 
@@ -35,28 +35,6 @@ func InstallProtoc(b *builder.Builder, vars *utils.Variables) *builder.Task {
 	return b.Add(t, builder.Message(t.Variables, "Protoc compiler installed"))
 }
 
-// InstallProtocGenGo installs the protoc-gen-go tool.
-// Since we want the plugin protoc-gen-go to be in the PREFIX/bin directory
-// we will specifically set the $GOBIN variable to ${PREFIX}/bin before
-// calling "go get -u github.com/golang/protobuf/protoc-gen-go"
-func InstallProtocGenGo(b *builder.Builder, vars *utils.Variables) *builder.Task {
-
-	t := builder.NewTask(b, "InstallProtocGenGo")
-	v := vars.Copy("WORKSPACE", "PREFIX", "VERBOSE", "DOWNLOAD_DIR")
-	v["GOBIN"] = path.Join("${PREFIX}", "bin")
-	v.ResolveAll()
-
-	protocGenGoURL := "github.com/golang/protobuf/protoc-gen-go"
-	t.Variables = v
-	e := base.Execute(b, &t.Variables, "go", "get", "-u", protocGenGoURL)
-
-	t.DependsOn(InstallProtoc(b, &t.Variables))
-	t.DependsOn(e)
-
-	t.AssignDefaultSignature()
-	return b.Add(t, builder.Message(t.Variables, fmt.Sprintf("protoc-gen-go installed to %v", v["GOBIN"])))
-}
-
 func doProtoc(v utils.Variables) *builder.Artifact {
 	v.Printf("Start doProtoc")
 	args := v["ARGS"].([]string)
@@ -79,7 +57,7 @@ func GoogleAPIs(b *builder.Builder, vars *utils.Variables) *builder.Task {
 	v["PACKAGE_DIR"] = path.Join("${WORKSPACE}", pkgName)
 	repoDir := "${PACKAGE_DIR}/" + pkgName
 	googleDir := v.Resolve(path.Join("${PACKAGE_DIR}", pkgName, "google"))
-	installDir := v.Resolve("${PREFIX}/include/googleapis")
+	installDir := v.Resolve("${PREFIX}/include/google")
 	v["SOURCES"] = base.NewGit("https://github.com/googleapis/googleapis.git?ref=master", repoDir)
 	v.ResolveAll()
 	t.Variables = v
@@ -106,7 +84,7 @@ func ImportGoogleAPIs(b *builder.Builder, vars *utils.Variables) *builder.Task {
 	t := builder.NewTask(b, "import-google-apis")
 	t.Variables = vars.Copy("PREFIX")
 	t.Variables.ResolveAll()
-	includeDir := t.Variables.Resolve("${PREFIX}/include/googleapis")
+	includeDir := t.Variables.Resolve("${PREFIX}/include/google")
 	t.DependsOn(GoogleAPIs(b, vars))
 	t.RunAlwaysSignature()
 	appendOpts(vars, "-I"+includeDir)
@@ -118,7 +96,6 @@ func ImportGoogleAPIs(b *builder.Builder, vars *utils.Variables) *builder.Task {
 // the includes that has been set by any dependencies.
 func Protoc(b *builder.Builder, vars *utils.Variables, cwd string, args ...string) *builder.Task {
 	t := builder.NewTask(b, "Protoc")
-	t.RunAlways = true
 	v := vars.Copy("WORKSPACE", "PREFIX", "VERBOSE", "DOWNLOAD_DIR", "*PROTOC_OPTS", "*PATH")
 	v["ARGS"] = args
 	var err error
@@ -129,8 +106,10 @@ func Protoc(b *builder.Builder, vars *utils.Variables, cwd string, args ...strin
 	prefixIncl := path.Join(v["PREFIX"].(string), "include")
 	appendOpts(&v, "-I.", "-I"+prefixIncl)
 	t.Variables = v
-	t.DependsOn(InstallProtocGenGo(b, &t.Variables))
+	t.DependsOn(gogo.Get(b, &t.Variables, "github.com/golang/protobuf/protoc-gen-go"))
+	t.DependsOn(InstallProtoc(b, &t.Variables))
 	t.AssignDefaultSignature()
-	v.Printf("Created ExecuteBash Task")
+	t.RunAlways = true
+	v.Printf("Created Protoc Task")
 	return b.Add(t, doProtoc)
 }
