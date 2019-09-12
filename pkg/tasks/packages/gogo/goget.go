@@ -11,7 +11,7 @@ import (
 // Get calls go get and installs to ${PREFIX}/bin
 func Get(b *builder.Builder, vars *utils.Variables, mod string) *builder.Task {
 	t := builder.NewTask(b, "InstallProtocGenGo")
-	v := vars.Copy("WORKSPACE", "PREFIX", "VERBOSE", "DOWNLOAD_DIR")
+	v := vars.Copy("WORKSPACE", "PREFIX", "VERBOSE")
 	v["GOBIN"] = path.Join("${PREFIX}", "bin")
 	v["EXPORTED_VARS"] = []string{"GOBIN"}
 	v.ResolveAll()

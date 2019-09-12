@@ -177,6 +177,7 @@ func (b *Builder) Add(task *Task, op Operation) *Task {
 // then the call should be properly embedded in a go routine
 // and safe-guarded by mutexes.
 func (b *Builder) Execute(t *Task) {
+	log.Printf("builder.Execute %s", t.ID)
 	b.lock.Lock()
 	sig := string(t.Signature)
 	if b.artifacts[sig] != nil {
