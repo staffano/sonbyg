@@ -104,7 +104,7 @@ func Protoc(b *builder.Builder, vars *utils.Variables, cwd string, args ...strin
 		log.Fatalf("Could not determine CWD, %v", err)
 	}
 	prefixIncl := path.Join(v["PREFIX"].(string), "include")
-	appendOpts(&v, "-I.", "-I"+prefixIncl)
+	appendOpts(&v, "-I"+v["CWD"].(string), "-I"+prefixIncl)
 	t.Variables = v
 	t.DependsOn(gogo.Get(b, &t.Variables, "github.com/golang/protobuf/protoc-gen-go"))
 	t.DependsOn(InstallProtoc(b, &t.Variables))
